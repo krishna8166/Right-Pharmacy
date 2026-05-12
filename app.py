@@ -268,8 +268,8 @@ def api_sales():
 # ═══════════════════════════════════════════════════════
 #  STARTUP
 # ═══════════════════════════════════════════════════════
+init_db()
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     print(f"\n{'='*50}")
     print(f"  {SHOP_NAME} is running!")
