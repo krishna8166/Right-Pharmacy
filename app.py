@@ -98,16 +98,14 @@ def customer():
 
 @app.route("/api/items")
 def api_items():
-    category = request.args.get("category", "")
-    search   = request.args.get("search", "").strip()
-    q, p, conds = "SELECT * FROM items", [], []
-    if category and category != "All":
-        conds.append("category=?"); p.append(category)
+    search = request.args.get("search", "").strip()
+    q, p = "SELECT * FROM items", []
+    
     if search:
-        conds.append("name LIKE ?"); p.append(f"%{search}%")
-    if conds:
-        q += " WHERE " + " AND ".join(conds)
-    q += " ORDER BY category, name"
+        q += " WHERE name LIKE ?"
+        p.append(f"%{search}%")
+    
+    q += " ORDER BY name" # Removed ordering by category
     with get_db() as c:
         rows = c.execute(q, p).fetchall()
     return jsonify([dict(r) for r in rows])
