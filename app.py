@@ -5,7 +5,7 @@ Run locally:
     pip install flask
     python app.py
     → Customer : http://localhost:5000
-    → Admin    : http://localhost:5000/admin   (password: admin123)
+    → Admin    : http://localhost:5000/admin   (password: right001)
 
 Deploy free to Render / Railway:
     Add a Procfile:  web: gunicorn app:app
@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "right-pharmacy-secret-2026")
 
 DB_PATH        = os.environ.get("DB_PATH", "retail_shop.db")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "right001")
 SHOP_NAME      = "Right Pharmacy"
 
 # Updated SAMPLE_ITEMS in app.py
