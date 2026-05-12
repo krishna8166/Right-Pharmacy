@@ -26,27 +26,13 @@ DB_PATH        = os.environ.get("DB_PATH", "retail_shop.db")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 SHOP_NAME      = "Right Pharmacy"
 
+# Updated SAMPLE_ITEMS in app.py
 SAMPLE_ITEMS = [
-    ("Lays Classic",         "Chips",       20, 50),
-    ("Kurkure Masala",       "Chips",       15, 60),
-    ("Bingo Mad Angles",     "Chips",       20, 45),
-    ("Pringles Original",    "Chips",       99, 30),
-    ("Doritos Nacho Cheese", "Chips",       30, 40),
-    ("Coca Cola 500ml",      "Drinks",      40, 80),
-    ("Pepsi 500ml",          "Drinks",      35, 70),
-    ("Sprite 500ml",         "Drinks",      35, 65),
-    ("Maaza Mango 250ml",    "Drinks",      25, 55),
-    ("Red Bull 250ml",       "Drinks",     110, 25),
-    ("Dairy Milk 40g",       "Chocolates",  40, 60),
-    ("KitKat 2-Finger",      "Chocolates",  30, 55),
-    ("5 Star",               "Chocolates",  20, 70),
-    ("Munch",                "Chocolates",  10, 80),
-    ("Ferrero Rocher 3pc",   "Chocolates", 150, 20),
-    ("Vanilla Cone",         "Ice Cream",   30, 40),
-    ("Choco Bar",            "Ice Cream",   25, 35),
-    ("Mango Stick",          "Ice Cream",   20, 50),
-    ("Kulfi Classic",        "Ice Cream",   35, 30),
-    ("Strawberry Cup",       "Ice Cream",   40, 25),
+    ("CTD-M 6.25/52",   "Blood Pressure", 120.00, 50),
+    ("FEBUTEC-40",     "Gout",           210.00, 30),
+    ("THYRONORM 50",   "Thyroid",        185.00, 100),
+    ("NAPROSYN-D 500", "Pain Relief",    95.00,  40),
+    ("CETISHAPE",      "Allergy",        55.00,  60),
 ]
 
 # ═══════════════════════════════════════════════════════
