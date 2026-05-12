@@ -20,11 +20,11 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "quickmart-dev-secret-2025")
+app.secret_key = os.environ.get("SECRET_KEY", "right-pharmacy-secret-2026")
 
 DB_PATH        = os.environ.get("DB_PATH", "retail_shop.db")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
-SHOP_NAME      = "QuickMart"
+SHOP_NAME      = "Right Pharmacy"
 
 SAMPLE_ITEMS = [
     ("Lays Classic",         "Chips",       20, 50),
