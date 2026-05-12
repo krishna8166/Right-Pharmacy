@@ -616,12 +616,7 @@ async function loadInventory() {
         const sfg  = item.stock > 10 ? "var(--succ)" : item.stock > 0 ? "var(--warn)" : "var(--danger)";
         return `
         <tr>
-          <td>
-            <div class="td-inner" style="display:flex;align-items:center;gap:0">
-              <div style="width:4px;background:${m.color};align-self:stretch;margin-right:10px;border-radius:2px"></div>
-              <span class="inv-cat-badge" style="background:${m.color}">${m.icon} ${item.category}</span>
-            </div>
-          </td>
+          
           <td><div class="td-inner inv-name">${item.name}</div></td>
           <td><div class="td-inner inv-price">₹${item.price}</div></td>
           <td><div class="td-inner" style="font-size:1.1rem;font-weight:800;color:${sfg}">${item.stock}</div></td>
