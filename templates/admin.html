@@ -174,8 +174,9 @@ button { cursor: pointer; border: none; }
 .order-accent { height: 3px; background: var(--warn); }
 .order-top {
   padding: 16px 20px 10px;
-  display: flex; align-items: flex-start;
-  justify-content: space-between;
+  display: flex; align-items: center;
+  justify-content: center; flex-direction: column; gap: 6px;
+  text-align: center;
 }
 .order-id   { font-size: 1rem; font-weight: 700; }
 .order-time { font-size: .8rem; color: var(--txt3); margin-top: 2px; }
@@ -186,13 +187,13 @@ button { cursor: pointer; border: none; }
   white-space: nowrap;
 }
 .order-div { height: 1px; background: var(--bg); margin: 0 20px; }
-.order-mid { padding: 10px 20px; }
+.order-mid { padding: 10px 20px; text-align: center; }
 .order-customer { font-weight: 600; margin-bottom: 4px; }
 .order-items { font-size: .82rem; color: var(--txt3); line-height: 1.5; }
 .order-bot {
   padding: 10px 20px 16px;
   display: flex; align-items: center;
-  justify-content: space-between;
+  justify-content: center; gap: 20px; flex-wrap: wrap;
 }
 .order-total { font-size: 1.25rem; font-weight: 800; }
 .no-orders {
@@ -218,20 +219,20 @@ button { cursor: pointer; border: none; }
 }
 .inv-table { width: 100%; border-collapse: collapse; }
 .inv-table th {
-  text-align: left; font-size: .75rem; font-weight: 700;
+  text-align: center; font-size: .75rem; font-weight: 700;
   color: var(--txt3); letter-spacing: .05em;
   padding: 10px 14px; background: #F0F4F8;
   border-bottom: 1px solid var(--border);
 }
 .inv-table td {
-  padding: 0; vertical-align: middle;
+  padding: 0; vertical-align: middle; text-align: center;
   border-bottom: 1px solid var(--border);
 }
 .inv-table tr:last-child td { border-bottom: none; }
 .inv-table tr { background: var(--surf); transition: background .1s; }
 .inv-table tr:nth-child(even) { background: #F8FAFC; }
 .inv-table tr:hover { background: var(--pri-lt); }
-.td-inner { padding: 10px 14px; }
+.td-inner { padding: 10px 14px; display: flex; align-items: center; justify-content: center; }
 .inv-accent-stripe {
   display: inline-block; width: 4px;
   background: currentColor; align-self: stretch;
@@ -289,10 +290,10 @@ button { cursor: pointer; border: none; }
 }
 .sale-row:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
 .sale-stripe { width: 4px; background: var(--succ); flex-shrink: 0; }
-.sale-body { flex: 1; padding: 12px 16px; }
+.sale-body { flex: 1; padding: 12px 16px; text-align: center; }
 .sale-top {
   display: flex; align-items: center;
-  justify-content: space-between; gap: 10px;
+  justify-content: center; gap: 10px;
 }
 .sale-id   { font-weight: 700; font-size: .95rem; }
 .sale-date {
@@ -302,7 +303,7 @@ button { cursor: pointer; border: none; }
 }
 .sale-items { font-size: .8rem; color: var(--txt3); margin: 4px 0 6px; line-height: 1.5; }
 .sale-bot {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
 }
 .sale-delivered {
   font-size: .75rem; font-weight: 700;
@@ -482,6 +483,8 @@ document.getElementById("pw").focus();
         <span class="panel-title">Inventory Management</span>
         <div style="display:flex;gap:8px">
           <button class="btn btn-soft btn-sm" onclick="loadInventory()">🔄 Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()" title="Download Excel template">📥 Template</button>
+          <button class="btn btn-soft btn-sm" style="background:#ECFDF5;color:#059669" onclick="openImportModal()">📤 Import Excel</button>
           <button class="btn btn-pri  btn-sm" onclick="openAddModal()">＋ Add Item</button>
         </div>
       </div>
@@ -548,6 +551,58 @@ document.getElementById("pw").focus();
     </div>
   </div>
 </div>
+
+<!-- ═══════════ IMPORT MODAL ═══════════ -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-title">📤  Bulk Import via Excel</div>
+    <div class="modal-sub">Upload a .xlsx file to add multiple items at once. Existing items (matched by name) will be skipped.</div>
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('xlsx-file').click()">
+      <div class="dz-icon">📊</div>
+      <div class="dz-text" id="dz-text">Click to select file, or drag & drop here</div>
+      <div class="dz-hint">.xlsx files only — <a href="#" onclick="event.stopPropagation();downloadTemplate()" style="color:var(--pri)">download template first</a></div>
+      <input type="file" id="xlsx-file" accept=".xlsx,.xls" style="display:none" onchange="onFileSelect(this)">
+    </div>
+
+    <!-- Result box (hidden until import runs) -->
+    <div class="import-result" id="import-result" style="display:none"></div>
+
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-pri" id="import-btn" style="flex:1;padding:11px"
+              onclick="runImport()" disabled>Import</button>
+      <button class="btn btn-ghost" style="padding:11px 20px"
+              onclick="closeImportModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 32px 20px; text-align: center;
+  cursor: pointer; transition: border-color .15s, background .15s;
+  background: var(--bg); margin: 4px 0;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--pri); background: var(--pri-lt);
+}
+.drop-zone.has-file { border-color: var(--succ); background: var(--succ-lt); }
+.dz-icon { font-size: 2.2rem; margin-bottom: 8px; }
+.dz-text { font-size: .95rem; font-weight: 600; color: var(--txt); margin-bottom: 4px; }
+.dz-hint { font-size: .82rem; color: var(--txt3); }
+
+.import-result {
+  border-radius: 10px; padding: 16px 18px; margin-top: 14px;
+  font-size: .88rem; line-height: 1.7;
+}
+.import-result.success { background: var(--succ-lt); border: 1px solid #A7F3D0; color: #065F46; }
+.import-result.partial { background: var(--warn-lt);  border: 1px solid #FDE68A; color: #92400E; }
+.import-result.error   { background: var(--dang-lt);  border: 1px solid #FECACA; color: #991B1B; }
+.ir-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+.ir-detail { font-size: .8rem; opacity: .8; margin-top: 6px; max-height: 110px; overflow-y: auto; }
+</style>
 
 <div class="toast" id="toast"></div>
 
@@ -849,6 +904,122 @@ async function deleteItem(id, name) {
   } else {
     showToast("❌ Could not remove item");
   }
+}
+
+// ── IMPORT MODAL ─────────────────────────────────
+let _importFile = null;
+
+function openImportModal() {
+  _importFile = null;
+  document.getElementById("import-btn").disabled = true;
+  document.getElementById("import-result").style.display = "none";
+  document.getElementById("xlsx-file").value = "";
+  resetDropZone();
+  document.getElementById("import-modal").classList.add("open");
+}
+function closeImportModal() {
+  document.getElementById("import-modal").classList.remove("open");
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("import-modal");
+  if (modal) modal.addEventListener("click", e => {
+    if (e.target === modal) closeImportModal();
+  });
+
+  // Drag-and-drop on drop zone
+  const dz = document.getElementById("drop-zone");
+  dz.addEventListener("dragover",  e => { e.preventDefault(); dz.classList.add("drag-over"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("drag-over"));
+  dz.addEventListener("drop", e => {
+    e.preventDefault(); dz.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if (f) applyFile(f);
+  });
+});
+
+function resetDropZone() {
+  const dz = document.getElementById("drop-zone");
+  dz.classList.remove("has-file", "drag-over");
+  document.getElementById("dz-text").textContent = "Click to select file, or drag & drop here";
+}
+
+function onFileSelect(input) {
+  if (input.files[0]) applyFile(input.files[0]);
+}
+
+function applyFile(file) {
+  if (!file.name.match(/\.xlsx?$/i)) {
+    showToast("❌ Please select a .xlsx file"); return;
+  }
+  _importFile = file;
+  const dz = document.getElementById("drop-zone");
+  dz.classList.add("has-file");
+  document.getElementById("dz-text").textContent = `✓  ${file.name}  (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById("import-btn").disabled = false;
+  document.getElementById("import-result").style.display = "none";
+}
+
+async function runImport() {
+  if (!_importFile) return;
+  const btn = document.getElementById("import-btn");
+  btn.disabled = true;
+  btn.textContent = "Importing…";
+
+  const fd = new FormData();
+  fd.append("file", _importFile);
+
+  let res;
+  try {
+    res = await fetch("/api/admin/items/bulk-import", { method: "POST", body: fd })
+              .then(r => r.json());
+  } catch (e) {
+    res = { error: "Network error — please try again." };
+  }
+
+  btn.textContent = "Import";
+  btn.disabled = false;
+
+  const box = document.getElementById("import-result");
+  box.style.display = "block";
+
+  if (res.error) {
+    box.className = "import-result error";
+    box.innerHTML = `<div class="ir-title">❌ Import failed</div>${res.error}`;
+    return;
+  }
+
+  const cls = res.errors === 0 && res.skipped === 0 ? "success"
+            : res.imported > 0 ? "partial" : "error";
+  box.className = "import-result " + cls;
+
+  let html = `<div class="ir-title">
+    ${res.imported > 0 ? "✅" : "⚠️"} Import complete
+  </div>`;
+  html += `<b>${res.imported}</b> item(s) imported`;
+  if (res.skipped > 0) html += `, <b>${res.skipped}</b> skipped (already exist)`;
+  if (res.errors  > 0) html += `, <b>${res.errors}</b> row(s) had errors`;
+
+  if (res.skipped_detail?.length) {
+    html += `<div class="ir-detail"><b>Skipped:</b><br>`
+          + res.skipped_detail.map(s => `Row ${s.row}: ${s.name} — ${s.reason}`).join("<br>")
+          + `</div>`;
+  }
+  if (res.error_detail?.length) {
+    html += `<div class="ir-detail"><b>Errors:</b><br>`
+          + res.error_detail.map(e => `Row ${e.row}${e.name ? " ("+e.name+")" : ""}: ${e.reason}`).join("<br>")
+          + `</div>`;
+  }
+  box.innerHTML = html;
+
+  if (res.imported > 0) {
+    loadInventory();
+    loadStats();
+    showToast(`✅ ${res.imported} item(s) imported successfully`);
+  }
+}
+
+function downloadTemplate() {
+  window.location.href = "/api/admin/items/template";
 }
 
 // ── Toast ─────────────────────────────────────────

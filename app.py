@@ -13,9 +13,9 @@ Deploy free to Render / Railway:
 """
 
 from flask import (Flask, render_template, request, jsonify,
-                   session, redirect, url_for)
+                   session, redirect, url_for, send_file)
 from functools import wraps
-import sqlite3, json
+import sqlite3, json, io
 from datetime import datetime
 import os
 
@@ -297,6 +297,174 @@ def api_sales():
             (" WHERE sale_date=?" if date else ""),
             ([date] if date else [])).fetchone()[0]
     return jsonify({"sales": [dict(r) for r in rows], "total": total})
+
+@app.route("/api/admin/items/template")
+@admin_required
+def api_download_template():
+    """Return a pre-filled .xlsx template the admin can fill in."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        return jsonify({"error": "openpyxl not installed"}), 500
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Items"
+
+    # Header row styling
+    hdr_fill = PatternFill("solid", fgColor="4361EE")
+    hdr_font = Font(bold=True, color="FFFFFF", size=11)
+    hdr_border = Border(
+        bottom=Side(style="medium", color="3047C8"))
+    headers = ["Name", "Price (₹)", "Stock"]
+    col_widths = [36, 14, 10]
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), start=1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font      = hdr_font
+        cell.fill      = hdr_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border    = hdr_border
+        ws.column_dimensions[
+            openpyxl.utils.get_column_letter(col)].width = w
+    ws.row_dimensions[1].height = 22
+
+    # Sample rows so admin understands the format
+    samples = [
+        ("Crocin 500mg", 28.00, 100),
+        ("Dolo 650",     32.00,  80),
+        ("Paracetamol",  15.00, 150),
+    ]
+    note_font   = Font(italic=True, color="888888", size=10)
+    data_border = Border(bottom=Side(style="thin", color="E2E8F0"))
+
+    for r, (name, price, stock) in enumerate(samples, start=2):
+        for col, val in enumerate([name, price, stock], start=1):
+            cell = ws.cell(row=r, column=col, value=val)
+            cell.alignment = Alignment(horizontal="center" if col > 1 else "left",
+                                       vertical="center")
+            cell.border    = data_border
+            if r == 2:                       # first data row hint
+                cell.font = note_font
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+
+    # Instructions sheet
+    info = wb.create_sheet("Instructions")
+    info["A1"] = "HOW TO USE THIS TEMPLATE"
+    info["A1"].font = Font(bold=True, size=13)
+    notes = [
+        "",
+        "1. Fill in the 'Items' sheet. Do not change the header row.",
+        "2. Name    — required, any text (e.g. Crocin 500mg)",
+        "3. Price   — required, number in ₹ (e.g. 28 or 28.50)",
+        "4. Stock   — optional, defaults to 0 if left blank",
+        "",
+        "5. You may delete the sample rows before importing.",
+        "6. Duplicate names will be SKIPPED (not overwritten).",
+        "7. Rows with missing Name or invalid Price will be skipped",
+        "   and listed in the error report after import.",
+    ]
+    for i, note in enumerate(notes, start=2):
+        info.cell(row=i, column=1, value=note)
+    info.column_dimensions["A"].width = 60
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True,
+                     download_name="import_template.xlsx")
+
+
+@app.route("/api/admin/items/bulk-import", methods=["POST"])
+@admin_required
+def api_bulk_import():
+    """Accept an .xlsx file and insert new items (skips duplicates by name)."""
+    try:
+        import openpyxl
+    except ImportError:
+        return jsonify({"error": "openpyxl is not installed on the server."}), 500
+
+    file = request.files.get("file")
+    if not file or not file.filename.lower().endswith((".xlsx", ".xls")):
+        return jsonify({"error": "Please upload a valid .xlsx file."}), 400
+
+    try:
+        wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        return jsonify({"error": f"Could not read file: {e}"}), 400
+
+    imported, skipped, errors = [], [], []
+
+    # Detect header row — skip rows until we find Name / Price
+    rows = list(ws.iter_rows(values_only=True))
+    start = 0
+    for i, row in enumerate(rows):
+        vals = [str(v).strip().lower() if v else "" for v in row[:3]]
+        if "name" in vals and any(k in vals for k in ("price", "price (₹)", "price (rs)")):
+            start = i + 1   # data starts after header
+            break
+
+    with get_db() as c:
+        existing_names = {
+            r[0].strip().lower()
+            for r in c.execute("SELECT name FROM items").fetchall()
+        }
+
+        for row_num, row in enumerate(rows[start:], start=start + 2):
+            if not any(row):          # blank row — skip silently
+                continue
+
+            raw_name  = row[0] if len(row) > 0 else None
+            raw_price = row[1] if len(row) > 1 else None
+            raw_stock = row[2] if len(row) > 2 else 0
+
+            name = str(raw_name).strip() if raw_name not in (None, "") else ""
+            if not name:
+                errors.append({"row": row_num, "reason": "Name is empty"})
+                continue
+
+            try:
+                price = float(raw_price)
+                if price < 0: raise ValueError()
+            except (TypeError, ValueError):
+                errors.append({"row": row_num, "name": name,
+                               "reason": f"Invalid price '{raw_price}'"})
+                continue
+
+            try:
+                stock = int(float(raw_stock)) if raw_stock not in (None, "") else 0
+                stock = max(0, stock)
+            except (TypeError, ValueError):
+                stock = 0
+
+            if name.lower() in existing_names:
+                skipped.append({"row": row_num, "name": name,
+                                "reason": "Name already exists"})
+                continue
+
+            c.execute("INSERT INTO items(name, price, stock) VALUES(?,?,?)",
+                      (name, price, stock))
+            existing_names.add(name.lower())
+            imported.append({"name": name, "price": price, "stock": stock})
+
+        c.commit()
+
+    return jsonify({
+        "ok":       True,
+        "imported": len(imported),
+        "skipped":  len(skipped),
+        "errors":   len(errors),
+        "items":    imported,
+        "skipped_detail": skipped,
+        "error_detail":   errors,
+    })
+
 
 # ═══════════════════════════════════════════════════════
 #  STARTUP
